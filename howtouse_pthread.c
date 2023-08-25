@@ -1,18 +1,10 @@
-#include <pthread.h> //Pthreadsを使う場合はインクルード
+#include <pthread.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
 #define NUM_THREADS 10
 
-/**
-実際にスレッドとなる関数
-@param arg: void* 
-@return void*
-注意: 入出力の型は上記の物である必要がある。そのため、入力などは関数内で適切にキャストする必要がある(1)。
-
- サンプル: idをうけとり各id毎に5回ループをして出力、各ループ毎に1secスリープをはさむ。
-**/
 void *thread_func(void *arg) {
     int id = (int)arg; //(1)
     for (int i = 0; i < 5; i++) {
@@ -23,26 +15,37 @@ void *thread_func(void *arg) {
     return "finished!";
 }
 
+//デタッチスレッドの作成
+
 int main(int argc, char *argv[]) {
-    pthread_t v[NUM_THREADS]; //スレッド用のハンドラを保存する配列。
-
-    for (int i = 0; i < NUM_THREADS; i++) {
-        if(pthread_create(&v[i], NULL, thread_func, (void *) i) != 0) { //スレッドの生成
-            perror("pthread_create");
-            return -1;
-        }
+    pthread_attr_t attr;
+    //アトリビュートの初期化
+    if(pthread_attr_init(&attr) != 0) {
+        perror("pthread_attr_init");
+        return -1;
     }
-    
 
-    for (int i = 0; i < NUM_THREADS; i++) {
-        char *ptr;
-        if(pthread_join(v[i], (void**)&ptr) == 0) { //スレッド終了待機
-            printf("msg = %s\n", ptr);
-        } else {
-            perror("pthread_join");
-            return -1;
-        }
+    //アトリビュートをデタッチスレッドに設定
+    if(pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_DETACHED) != 0) {
+        perror("pthread_attr_setdetachstate");
+        return -1;
     }
+
+    pthread_t th; // スレッド用のハンドラを保存する配列。
+
+    //スレッドの生成 アトリビュートを指定
+    if(pthread_create(&th, &attr, thread_func, NULL) != 0) { 
+        perror("pthread_create");
+        return -1;
+    }
+
+    //アトリビュートの破棄
+    if(pthread_attr_destroy(&attr) != 0) {
+        perror("pthread_attr_destroy");
+        return -1;
+    }
+
+    sleep(7);
 
     return 0;
 }
